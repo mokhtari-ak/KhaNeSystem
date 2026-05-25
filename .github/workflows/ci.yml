@@ -1,0 +1,22 @@
+name: CI
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build
+      run: |
+        mkdir build && cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+        make
+    
+    - name: Quality Gates - Memory Check
+      run: |
+        python3 _bmad/scripts/check_memory.py build/KhaNeSystem.map
+        
+    - name: Static Analysis
+      run: |
+        clang-tidy -p build/ Libs/**/*.hpp Modules/**/*.hpp
+        cppcheck --enable=all --error-exitcode=1 Libs/ Modules/

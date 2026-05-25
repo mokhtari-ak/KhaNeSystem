@@ -1,0 +1,11 @@
+PROJECT_NAME           = "KhaNeSystem"
+OUTPUT_DIRECTORY       = docs
+GENERATE_LATEX         = NO
+GENERATE_HTML          = YES
+RECURSIVE              = YES
+EXTRACT_ALL            = YES
+FILE_PATTERNS          = *.hpp *.cpp
+RECURSIVE              = YES
+PREDEFINED             = __cplusplus=202002L
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
