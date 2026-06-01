@@ -1,0 +1,73 @@
+# generated: 2026-05-26T10:00:00Z
+# last_updated: 2026-05-26T15:15:00Z
+# project: KhaNeSystem
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-05-26T10:00:00Z
+last_updated: 2026-05-26T15:15:00Z
+project: KhaNeSystem
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  epic-1: in-progress
+  1-1-setup-stm32f4-project-structure-cubemx-cmake: done
+  1-2-configuration-des-toolchains-et-flags-compilateur-cpp20: done
+  1-3-implementation-de-la-couche-stm32f4hal-wrappers: done
+  1-4-implementation-de-la-systemclock-tim2-32-bit: done
+  epic-1-retrospective: optional
+  epic-2: in-progress
+  2-1-implementation-des-abstractions-rtos-freertos-threadx: done
+  2-2-developpement-de-l-internal-event-bus-type: done
+  2-3-implementation-des-types-de-messages-bus-sensorframe-statevector-etc: done
+  2-4-module-rf-communication-mavlink-v2-via-uart-dma: done
+  2-5-module-logger-ecriture-brute-sd-card-via-dma: done
+  epic-2-retrospective: optional
+  epic-3: in-progress
+  3-1-drivers-capteurs-imu-baro-gnss-magneto-airspeed: done
+  3-2-integration-bibliotheque-kalmanfilter: done
+  3-3-module-sensorfusion-ekf-wrapper: done
+  epic-3-retrospective: optional
+  epic-4: in-progress
+  4-1-implementation-des-controleurs-pid-deterministes: done
+  4-2-flightcontroltask-boucle-400hz: done
+  4-3-navigationtask-waypoints-geofencing: done
+  epic-4-retrospective: optional
+  epic-5: in-progress
+  5-1-safetytask-faultbus-watchdog-failsafe: done
+  5-2-configurationmanager-persistance-flash: done
+  5-3-mise-en-place-ci-cd-et-verification-memoire: done
+  5-4-module-calibration-tuning-persistance-et-validation-crc: backlog
+  epic-5-retrospective: optional

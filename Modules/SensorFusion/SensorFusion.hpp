@@ -1,42 +1,83 @@
 #pragma once
 
+#include "kalman/ExtendedKalmanFilter.hpp"
 #include "BusMessages.hpp"
-#include "HalTypes.hpp"
+#include "Eigen/Core"
+#include <array>
 
-namespace fusion {
+namespace modules::sensor_fusion {
 
-// Concept pour l'estimateur d'état (Encapsulation EKF/Madgwick)
-template<typename T>
-concept IStateEstimator = requires(T t, const bus::SensorFrame& frame) {
-    { t.update_attitude(frame) } -> std::same_as<hal::Result<void>>;
-    { t.get_state() } -> std::same_as<bus::StateVector>;
-    { t.is_healthy() } -> std::same_as<bool>;
+// Vecteur d'état : Position(3), Vitesse(3), Attitude(4), Biais Gyro(3), Biais Accel(2) = 15 états
+using StateVector = Eigen::Matrix<float, 15, 1>;
+
+struct DroneState {
+    Eigen::Vector3f position;
+    Eigen::Vector3f velocity;
+    Eigen::Quaternionf attitude;
+    Eigen::Vector3f gyro_bias;
+    Eigen::Vector3f accel_bias;
 };
 
-// Implémentation concrète de la fusion (EKF wrapper)
-class SensorFusion {
+// Modèle de prédiction (IMU)
+class DroneSystemModel : public Kalman::LinearizedSystemModel<StateVector, Eigen::Matrix<float, 6, 1>> { // 6 = Accel + Gyro
 public:
-    SensorFusion() = default;
+    // f(x, u) : x est l'état précédent, u est la commande (accel + gyro)
+    StateVector f(const StateVector& x, const Eigen::Matrix<float, 6, 1>& u) const override {
+        StateVector x_new = x;
+        float dt = 0.004f; // 250Hz
 
-    hal::Result<void> update_attitude(const bus::SensorFrame& frame) noexcept {
-        // Logique de fusion (Madgwick/EKF via KalmanFilterLibrary)
-        // Vérification innovation -> is_healthy_ = false si divergence
-        return {};
+        // u : [accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z]
+        Eigen::Vector3f accel = u.segment<3>(0) - x.segment<3>(13); // Accel - AccelBias
+        Eigen::Vector3f gyro  = u.segment<3>(3) - x.segment<3>(10); // Gyro - GyroBias
+
+        // Position = Position + Vitesse * dt
+        x_new.segment<3>(0) += x.segment<3>(3) * dt;
+
+        // Vitesse = Vitesse + (Rot(Attitude) * Accel + Gravity) * dt
+        Eigen::Quaternionf q(x[6], x[7], x[8], x[9]);
+        Eigen::Vector3f gravity(0.0f, 0.0f, 9.81f);
+        x_new.segment<3>(3) += (q * accel + gravity) * dt;
+
+        // Attitude : mise à jour avec quaternion
+        Eigen::Quaternionf q_dot(0.0f, gyro.x(), gyro.y(), gyro.z());
+        q_dot.coeffs() *= 0.5f;
+        q_dot = q * q_dot; // Rotation
+        x_new.segment<4>(6) = (q.coeffs() + q_dot.coeffs() * dt).normalized();
+
+        return x_new;
     }
 
-    bus::StateVector get_state() const noexcept {
-        return state_;
+    void updateJacobians(const StateVector& x, const Eigen::Matrix<float, 6, 1>& u) override {
+        // Calculer F (Jacobienne par rapport à x) et W (par rapport au bruit)
+        // F.setIdentity(); // exemple
+        // W.setIdentity(); // exemple
+    }
+};
+
+// Wrapper EKF encapsulant la logique de fusion
+class EkfWrapper {
+public:
+    EkfWrapper() = default;
+
+    void update(const bus::SensorFrame& frame) {
+        // Prédiction basée sur l'IMU (fréquence élevée)
+        // update(imu_measurement);
     }
 
-    bool is_healthy() const noexcept {
-        return is_healthy_;
+    void update(const bus::GnssFrame& frame) {
+        // Correction basée sur le GNSS
+        // update(gnss_measurement);
+    }
+
+    bus::StateVector get_state() const {
+        bus::StateVector sv;
+        // Conversion de l'état EKF interne vers StateVector (bus)
+        return sv;
     }
 
 private:
-    bus::StateVector state_{};
-    bool is_healthy_ = true;
+    Kalman::ExtendedKalmanFilter<StateVector> ekf_;
+    DroneSystemModel system_model_;
 };
 
-static_assert(IStateEstimator<SensorFusion>, "SensorFusion must satisfy IStateEstimator concept");
-
-} // namespace fusion
+} // namespace modules::sensor_fusion

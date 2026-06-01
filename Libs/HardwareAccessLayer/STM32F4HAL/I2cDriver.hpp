@@ -1,115 +1,72 @@
 #pragma once
 
-#include <vector>
 #include <cstdint>
-#include <map>
-#include <functional>
 #include "II2cDriver.hpp"
 #include "stm32f4xx_hal.h"
 #include "I2cConfigPolicy.hpp"
 
 using namespace WrapperBase;
 
-namespace Hal {
+namespace hal {
 
-	struct HalI2cDriver : public Hal::II2cDriver {
+	struct HalI2cDriver : public hal::II2cDriver {
 
-		inline static constexpr int8_t handleEmpty = -1;
-		/**
-		* @Brief Vecteur pour stocker les gestionnaires I2C.
-		* @Note Chaque gestionnaire correspond à une instance I2C (ex: I2C1, I2C2, etc.) et contient la configuration et l'état du périphérique I2C correspondant.
-		* @Note Les gestionnaires sont initialisés lors de l'appel à init() et utilisés pour toutes les opérations I2C.
-		 * @Note L'utilisation d'un vecteur permet de facilement étendre le driver à plusieurs périphériques I2C si nécessaire, sans devoir dupliquer le code pour chaque instance. Cependant, assurez-vous de gérer correctement les indices du vecteur pour éviter des accès hors limites.
-		 * @Note une modification est necessaire utiliser Eigen3 à la place de std::vector pour stocker les handles, afin de réduire l'empreinte mémoire et d'améliorer les performances. Eigen3 offre des structures de données optimisées pour les systèmes embarqués, ce qui peut être bénéfique pour la gestion des ressources dans un environnement à contraintes.
-		 * @Note Assurez-vous que les gestionnaires stockés dans ce vecteur sont correctement initialisés et configurés avant de les utiliser pour des opérations I2C. Vous pouvez également envisager d'ajouter une gestion d'erreur pour les cas où un gestionnaire n'est pas trouvé pour une instance I2C donnée ou pour les cas où une opération I2C échoue en raison d'une configuration incorrecte ou d'un problème matériel.
-		 * @Note Enfin, n'oubliez pas de tester votre implémentation avec différents scénarios d'utilisation de l'I2C pour vous assurer que les gestionnaires fonctionnent correctement et que le comportement du système est conforme à vos attentes dans toutes les conditions d'utilisation.
-		 * @Note Si vous prévoyez d'utiliser plusieurs instances I2C, assurez-vous de gérer correctement les ressources et les conflits potentiels entre les différentes instances, notamment en ce qui concerne les interruptions, les adresses des périphériques, etc. Vous pouvez également envisager d'ajouter des fonctionnalités supplémentaires pour faciliter la gestion de plusieurs instances I2C, comme des fonctions pour récupérer un gestionnaire par instance ou pour vérifier l'état d'une instance avant de l'utiliser.
-		 * @Note N'oubliez pas que l'I2C est un protocole de communication qui peut être sensible aux problèmes de timing et de signal, donc assurez-vous de tester votre implémentation dans des conditions réelles pour vous assurer que les performances et la fiabilité sont au rendez-vous.
-		 * @Note Remplacer map par Eigen3 dans un futur proche pour réduire l'empreinte mémoire et améliorer les performances. Eigen3 offre des structures de données optimisées pour les systèmes embarqués, ce qui peut être bénéfique pour la gestion des ressources dans un environnement à contraintes.
-		*/
-		inline static std::vector<I2C_HandleTypeDef> i2cHandles = { };
-        
-		// Maps pour les callbacks, indexés par l'instance I2C (I2C1, I2C2...)
-		inline static std::map<I2C_TypeDef*, std::function<void()>> tx_complete_callbacks = { };
-		inline static std::map<I2C_TypeDef*, std::function<void()>> rx_complete_callbacks = { };
-		inline static std::map<I2C_TypeDef*, std::function<void()>> error_callbacks = { };
-		// Note : I2C a aussi des callbacks pour MemTx/MemRx, vous pouvez les ajouter si besoin
-		/**
-		* @Brief Initialise l'I2C.
-		* @Note Cette fonction initialise l'I2C en fonction de la configuration spécifiée.
-		*/
+		static constexpr int8_t MaxI2cHandles = 3;
+		
+		inline static I2C_HandleTypeDef i2cHandles[MaxI2cHandles] = {};
+		inline static int8_t handleCount = 0;
+		inline static void (*tx_complete_callbacks[MaxI2cHandles])() = {nullptr};
+		inline static void (*rx_complete_callbacks[MaxI2cHandles])() = {nullptr};
+		inline static void (*error_callbacks[MaxI2cHandles])() = {nullptr};
+		
 		template<I2cConfigPolicy T>
-			int8_t init() {
-				enable_clock(T::Port);
+		int8_t init() {
+			if (handleCount >= MaxI2cHandles) return -1;
+			enable_clock(T::Port);
 
-				I2C_HandleTypeDef m_handle = { };
-				m_handle.Instance = MapPort(T::Port);
-				m_handle.Init = getHALConfig<T>();
+			I2C_HandleTypeDef m_handle = { };
+			m_handle.Instance = MapPort(T::Port);
+			m_handle.Init = getHALConfig<T>();
 
-				HAL_StatusTypeDef status = HAL_I2C_Init(&m_handle);
+			HAL_StatusTypeDef status = HAL_I2C_Init(&m_handle);
 
-				if (status == HAL_OK) {
-					i2cHandles.push_back(m_handle);
-					return i2cHandles.size() - 1;
-				}
-				return handleEmpty;
+			if (status == HAL_OK) {
+				i2cHandles[handleCount] = m_handle;
+				return handleCount++;
 			}
-
-		// --- Implémentation des fonctions de l'interface ---
-
-		DriverStatus master_transmit(int8_t handleIndex, uint16_t devAddress, const uint8_t* data, uint16_t size, uint32_t timeout) override {
-			auto result = HAL_I2C_Master_Transmit(&i2cHandles[handleIndex], devAddress, const_cast<uint8_t*>(data), size, timeout);
-			return From_hal(result);
-		}
-		DriverStatus master_receive(int8_t handleIndex, uint16_t devAddress, uint8_t* data, uint16_t size, uint32_t timeout) override {
-			auto result = HAL_I2C_Master_Receive(&i2cHandles[handleIndex], devAddress, data, size, timeout);
-			return From_hal(result);
-		}
-		DriverStatus mem_write(int8_t handleIndex, uint16_t devAddress, uint16_t memAddress, uint16_t memAddSize, const uint8_t* data, uint16_t size, uint32_t timeout) override {
-			auto result = HAL_I2C_Mem_Write(&i2cHandles[handleIndex], devAddress, memAddress, memAddSize, const_cast<uint8_t*>(data), size, timeout);
-			return From_hal(result);
-		}
-		DriverStatus mem_read(int8_t handleIndex, uint16_t devAddress, uint16_t memAddress, uint16_t memAddSize, uint8_t* data, uint16_t size, uint32_t timeout) override {
-			auto result = HAL_I2C_Mem_Read(&i2cHandles[handleIndex], devAddress, memAddress, memAddSize, data, size, timeout);
-			return From_hal(result);
+			return -1;
 		}
 
-		DriverStatus master_transmit_it(int8_t handleIndex, uint16_t devAddress, const uint8_t* data, uint16_t size) override {
-			return From_hal(HAL_I2C_Master_Transmit_IT(&i2cHandles[handleIndex], devAddress, const_cast<uint8_t*>(data), size));
-		}
-		DriverStatus master_receive_it(int8_t handleIndex, uint16_t devAddress, uint8_t* data, uint16_t size) override {
-			return From_hal(HAL_I2C_Master_Receive_IT(&i2cHandles[handleIndex], devAddress, data, size));
-		}
-		DriverStatus mem_write_it(int8_t handleIndex, uint16_t devAddress, uint16_t memAddress, uint16_t memAddSize, const uint8_t* data, uint16_t size) override {
-			return From_hal(HAL_I2C_Mem_Write_IT(&i2cHandles[handleIndex], devAddress, memAddress, memAddSize, const_cast<uint8_t*>(data), size));
-		}
-		DriverStatus mem_read_it(int8_t handleIndex, uint16_t devAddress, uint16_t memAddress, uint16_t memAddSize, uint8_t* data, uint16_t size) override {
-			return From_hal(HAL_I2C_Mem_Read_IT(&i2cHandles[handleIndex], devAddress, memAddress, memAddSize, data, size));
+		static void attach_callbacks(int8_t handle_index, void (*tx_cb)(), void (*rx_cb)(), void (*error_cb)()) {
+			if (handle_index >= 0 && handle_index < handleCount) {
+				tx_complete_callbacks[handle_index] = tx_cb;
+				rx_complete_callbacks[handle_index] = rx_cb;
+				error_callbacks[handle_index] = error_cb;
+			}
 		}
 
-		// --- Fonctions statiques de gestion (callbacks, IRQ, clock) ---
-
-		static void attach_callbacks(int8_t handle_index, std::function<void()> tx_cb, std::function<void()> rx_cb, std::function<void()> error_cb) {
-			I2C_TypeDef* instance = i2cHandles[handle_index].Instance;
-			if (tx_cb) tx_complete_callbacks[instance] = std::move(tx_cb);
-			if (rx_cb) rx_complete_callbacks[instance] = std::move(rx_cb);
-			if (error_cb) error_callbacks[instance] = std::move(error_cb);
-		}
-
-		// Fonctions à appeler depuis les callbacks globaux HAL (ex: stm32f4xx_it.c)
 		static void handle_tx_complete(I2C_HandleTypeDef *hi2c) {
-			if (tx_complete_callbacks.count(hi2c->Instance)) {
-				tx_complete_callbacks[hi2c->Instance]();
+			for(int8_t i = 0; i < handleCount; ++i) {
+				if(i2cHandles[i].Instance == hi2c->Instance && tx_complete_callbacks[i]) {
+					tx_complete_callbacks[i]();
+					break;
+				}
 			}
 		}
 		static void handle_rx_complete(I2C_HandleTypeDef *hi2c) {
-			if (rx_complete_callbacks.count(hi2c->Instance)) {
-				rx_complete_callbacks[hi2c->Instance]();
+			for(int8_t i = 0; i < handleCount; ++i) {
+				if(i2cHandles[i].Instance == hi2c->Instance && rx_complete_callbacks[i]) {
+					rx_complete_callbacks[i]();
+					break;
+				}
 			}
 		}
 		static void handle_error(I2C_HandleTypeDef *hi2c) {
-			if (error_callbacks.count(hi2c->Instance)) {
-				error_callbacks[hi2c->Instance]();
+			for(int8_t i = 0; i < handleCount; ++i) {
+				if(i2cHandles[i].Instance == hi2c->Instance && error_callbacks[i]) {
+					error_callbacks[i]();
+					break;
+				}
 			}
 		}
 

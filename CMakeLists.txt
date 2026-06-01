@@ -13,12 +13,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Embedded flags for Cortex-M4F
-# original set(CPU_FLAGS "-mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard")
-set(CPU_FLAGS "-mcpu=cortex-m4")
-add_compile_options(${CPU_FLAGS} -fno-exceptions -fno-rtti -fno-unwind-tables -ffunction-sections -fdata-sections)
-add_link_options(${CPU_FLAGS} --specs=nosys.specs -Wl,--gc-sections)
-
 # Release optimizations
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     add_compile_definitions(EIGEN_NO_DEBUG EIGEN_NO_MALLOC)
@@ -64,16 +58,17 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     Modules/Safety
     Modules/Calibration
     Modules/ConfigurationManager
+    Middlewares/Third_Party/mavlink/standard
 )
 
 # Sources
-#target_sources(${CMAKE_PROJECT_NAME} PRIVATE
-#    Core/Src/main.cpp
-#    Core/Src/stm32f4xx_it.c
-#    Core/Src/stm32f4xx_hal_msp.c
-#    Core/Src/system_stm32f4xx.c
-#    /startup_stm32f4xx.s
-#)
+target_sources(${CMAKE_PROJECT_NAME} PRIVATE
+    Core/Src/main.cpp
+    Core/Src/app_main.cpp
+    Core/Src/stm32f4xx_it.c
+    Core/Src/stm32f4xx_hal_msp.c
+    startup_stm32f407xx.s
+)
 
 # Linking
 target_link_libraries(${CMAKE_PROJECT_NAME}
@@ -83,6 +78,13 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     WrapperTypes
     Wrappers
     Eigen3::Eigen
+    InternalEventBus
+    SensorFusion
+    FlightControl
+    Navigation
+    Safety
+    Calibration
+    ConfigurationManager
 )
 
 # Memory Check Script

@@ -1,0 +1,2 @@
+add_executable(PidController_test PidController_test.cpp)
+target_link_libraries(PidController_test PRIVATE WrapperTypes)

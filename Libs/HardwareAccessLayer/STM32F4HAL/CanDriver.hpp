@@ -4,44 +4,63 @@
 #include "stm32f4xx_hal.h"
 #include "CAN/CanEnumsStructs.hpp"
 #include "CAN/CanConfigPolicy.hpp"
-#include <map>
 #include <cassert>
-#include <functional>
-#include <iostream> // Pour les messages de debug/erreur (peut être retiré en prod)
+#include <algorithm>
 
 using namespace WrapperBase;
 
-namespace Hal {
-    /**
-    * @Brief Ce driver CAN utilise la HAL de ST pour gérer les périphériques CAN du STM32F4xx.
-    * @Note  Il est conçu pour être flexible et configurable via des politiques de configuration (CanConfigPolicy).
-    *       Il gère à la fois la transmission et la réception (polling et interruption) des messages CAN.
-    * @Note  Les fonctions de mapping convertissent les types et valeurs C++ en constantes attendues par la HAL.
-    * @Note  Les callbacks de réception sont stockés dans des maps pour permettre une gestion dynamique des interruptions.
-    */
+namespace hal {
     struct HalCanDriver : public ICanDriver {
 
-        /**
-        * @Brief Stocke les handles HAL pour chaque port CAN utilisé.
-         *       Cela permet de gérer plusieurs périphériques CAN (ex: CAN1 et CAN2) avec la même classe driver.
-         *       Chaque handle contient la configuration et l'état du périphérique CAN correspondant.
-         * @Note  Les handles sont initialisés lors de l'appel à init_peripheral() et utilisés pour toutes les opérations CAN.
-         * @Note  L'utilisation d'une map permet de facilement étendre le driver à plusieurs périphériques CAN si nécessaire, sans devoir dupliquer le code pour chaque instance.
-         * @Note une modification est necessaire utiliser Eigen3 à la place de std::map pour stocker les handles et les callbacks, afin de réduire l'empreinte mémoire et d'améliorer les performances. Eigen3 offre des structures de données optimisées pour les systèmes embarqués, ce qui peut être bénéfique pour la gestion des ressources dans un environnement à contraintes.
-         */
-        inline static std::map<CanPort, CAN_HandleTypeDef> canHandles;
+        static constexpr int8_t MaxCanHandles = 2;
         
-        // Stocke les callbacks de réception C++ pour chaque FIFO (0 et 1)
-        inline static std::map<CanPort, std::map<CanRxFifo, std::function<void(const CanMessage&)>>> rxCallbacks;
+        inline static CAN_HandleTypeDef canHandles[MaxCanHandles] = {};
+        inline static int8_t handleCount = 0;
         
-        // --- Fonctions de Mapping HAL (à implémenter en entier) ---
+        // Callbacks statiques : 2 ports * 2 FIFOs
+        inline static void (*rxCallbacks[MaxCanHandles][2])(const CanMessage&) = {nullptr};
+        
+        static int8_t GetPortIndex(CanPort port) {
+            return (port == CanPort::CAN_1) ? 0 : 1;
+        }
 
-        static CAN_TypeDef* MapPort(CanPort port) {
-            switch (port) {
-                case CanPort::CAN_1: return CAN1;
-                case CanPort::CAN_2: return CAN2;
+        static void attach_rx_interrupt(CanPort port, CanRxFifo fifo, void (*cb)(const CanMessage&)) {
+            int8_t p_idx = GetPortIndex(port);
+            int8_t f_idx = (fifo == CanRxFifo::FIFO_0) ? 0 : 1;
+            
+            if (p_idx >= 0 && p_idx < MaxCanHandles) {
+                rxCallbacks[p_idx][f_idx] = cb;
+                uint32_t halFifo = (fifo == CanRxFifo::FIFO_0) ? CAN_IT_RX_FIFO0_MSG_PEND : CAN_IT_RX_FIFO1_MSG_PEND;
+                HAL_CAN_ActivateNotification(&canHandles[p_idx], halFifo);
             }
-            return nullptr;
+        }
+        
+        static void handle_rx_callback(CAN_HandleTypeDef* hcan, CanRxFifo fifo) {
+            int8_t p_idx = -1;
+            for(int8_t i = 0; i < handleCount; ++i) {
+                if(canHandles[i].Instance == hcan->Instance) {
+                    p_idx = i;
+                    break;
+                }
+            }
+            if (p_idx == -1) return;
+
+            int8_t f_idx = (fifo == CanRxFifo::FIFO_0) ? 0 : 1;
+            
+            CAN_RxHeaderTypeDef rxHeader;
+            uint8_t rxData[8];
+            uint32_t halFifo = (fifo == CanRxFifo::FIFO_0) ? CAN_RX_FIFO0 : CAN_RX_FIFO1;
+
+            if (HAL_CAN_GetRxMessage(&canHandles[p_idx], halFifo, &rxHeader, rxData) == HAL_OK) {
+                if (rxCallbacks[p_idx][f_idx]) {
+                    CanMessage msg;
+                    msg.idType = (rxHeader.IDE == CAN_ID_STD) ? CanIdType::Standard : CanIdType::Extended;
+                    msg.id = (msg.idType == CanIdType::Standard) ? rxHeader.StdId : rxHeader.ExtId;
+                    msg.dataLength = rxHeader.DLC;
+                    std::copy(rxData, rxData + rxHeader.DLC, msg.data);
+                    rxCallbacks[p_idx][f_idx](msg);
+                }
+            }
         }
 
         static uint32_t MapMode(CanMode mode) {

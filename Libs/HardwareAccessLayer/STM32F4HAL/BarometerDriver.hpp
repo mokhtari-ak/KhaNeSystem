@@ -2,33 +2,31 @@
 
 #include "IHalWrappers.hpp"
 #include "HalTypes.hpp"
+#include "I2cDriver.hpp"
 
 namespace hal {
 
 struct BaroData {
-    float pressure_pa;
-    float altitude_m;
+    float altitude;
+    float pressure;
     Microseconds timestamp;
     bool is_valid;
 };
 
-// Driver Baromètre (Ex: MS5611)
 template<typename Transport>
 class BarometerDriver {
 public:
     explicit BarometerDriver(Transport& transport) : transport_(transport) {}
 
     Result<void> init() noexcept {
-        // Envoi séquence de réinitialisation PROM
+        // Init I2C/SPI Baro (ex: MS5611)
         return {};
     }
 
     Result<BaroData> update() noexcept {
-        // Lecture ADC via transport_ (SPI), conversion press/temp
-        // Validation : [-500m, 9000m], variation < 50m/s
         return BaroData{
-            .pressure_pa = 101325.0f,
-            .altitude_m = 0.0f,
+            .altitude = 0.0f,
+            .pressure = 1013.25f,
             .timestamp = Microseconds(0),
             .is_valid = true
         };
@@ -36,19 +34,6 @@ public:
 
 private:
     Transport& transport_;
-};
-
-// Mock pour simulation
-class BarometerDriverHook {
-public:
-    Result<BaroData> update() noexcept {
-        return BaroData{
-            .pressure_pa = 101325.0f,
-            .altitude_m = 10.0f,
-            .timestamp = Microseconds(0),
-            .is_valid = true
-        };
-    }
 };
 
 } // namespace hal

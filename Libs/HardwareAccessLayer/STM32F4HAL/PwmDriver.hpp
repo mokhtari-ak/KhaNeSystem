@@ -4,101 +4,89 @@
 #include "PwmEnumsStructs.hpp"
 #include "PwmConfigPolicy.hpp"
 #include "stm32f4xx_hal.h"
-#include <map>
 #include <cassert>
+#include <array>
 
-namespace Hal {
+namespace hal {
 
-	struct HalPwmDriver : public IPwmDriver {
+	struct HalPwmDriver : public hal::IPwmDriver {
 
-		// Map statique pour stocker les handles des timers déjà initialisés
-		// Clé: Pointeur vers le registre du timer (ex: TIM2)
-		// Valeur: Le handle HAL correspondant
-		/**
-		* @Brief Stocke un handle HAL pour chaque timer utilisé pour le PWM.
-		* @Note Chaque handle correspond à une instance de timer (ex: TIM1, TIM2, etc.) et contient la configuration et l'état du timer correspondant.
-		* @Note Les handles sont initialisés lors de l'appel à init() et utilisés pour toutes les opérations PWM (démarrage, arrêt, mise à jour du duty cycle, etc.).
-		* @Note L'utilisation d'une map permet de facilement étendre le driver à plusieurs timers si nécessaire, sans devoir dupliquer le code pour chaque instance. Cependant, assurez-vous de gérer correctement les accès à cette map dans un contexte multi-thread ou d'interruption pour éviter des conditions de course.
-		* @Note une modification est necessaire utiliser Eigen3 à la place de std::map pour stocker les handles, afin de réduire l'empreinte mémoire et d'améliorer les performances. Eigen3 offre des structures de données optimisées pour les systèmes embarqués, ce qui peut être bénéfique pour la gestion des ressources dans un environnement à contraintes.
-		*/
-		inline static std::map<TIM_TypeDef*, TIM_HandleTypeDef> m_handles;
-		/**
-		* @Brief Initialise le driver PWM.
-		* @Note Cette fonction initialise le driver PWM en fonction de la configuration spécifiée.
-		*/
+		static constexpr int8_t MaxTimers = 12;
+		inline static TIM_HandleTypeDef m_handles[MaxTimers] = {};
+		inline static bool is_initialized[MaxTimers] = {false};
+
+		static int8_t GetTimerIndex(TIM_TypeDef* instance) {
+			if (instance == TIM1) return 0;
+			if (instance == TIM2) return 1;
+			if (instance == TIM3) return 2;
+			if (instance == TIM4) return 3;
+			if (instance == TIM5) return 4;
+			if (instance == TIM8) return 5;
+			if (instance == TIM9) return 6;
+			if (instance == TIM10) return 7;
+			if (instance == TIM11) return 8;
+			if (instance == TIM12) return 9;
+			if (instance == TIM13) return 10;
+			if (instance == TIM14) return 11;
+			return -1;
+		}
+
 		template <PwmConfigPolicy T>
-			void init() override {
-				TIM_TypeDef* instance = MapTimerInstance(T::Timer);
-				TIM_HandleTypeDef htim;
+		void init() override {
+			TIM_TypeDef* instance = MapTimerInstance(T::Timer);
+			int8_t idx = GetTimerIndex(instance);
+			if (idx == -1) assert("Timer not supported");
 
-				// Vérifie si ce timer a déjà été initialisé
-				bool is_new_timer = (m_handles.find(instance) == m_handles.end());
-
-				if (is_new_timer) {
-					// Première initialisation pour ce timer
-					EnableClock(T::Timer); // Active l'horloge du timer
+			if (!is_initialized[idx]) {
+				EnableClock(T::Timer);
                 
-					htim.Instance = instance;
-					htim.Init.Prescaler = T::Prescaler;
-					htim.Init.Period = T::Period;
-					htim.Init.CounterMode = TIM_COUNTERMODE_UP;
-					htim.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-					htim.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE; // Important pour PWM
+				m_handles[idx].Instance = instance;
+				m_handles[idx].Init.Prescaler = T::Prescaler;
+				m_handles[idx].Init.Period = T::Period;
+				m_handles[idx].Init.CounterMode = TIM_COUNTERMODE_UP;
+				m_handles[idx].Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+				m_handles[idx].Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
                 
-					// Initialise la base de temps du Timer
-					if (HAL_TIM_PWM_Init(&htim) != HAL_OK) {
-						assert("HAL_TIM_PWM_Init failed");
-					}
-                
-					m_handles[instance] = htim; // Sauvegarde le handle
+				if (HAL_TIM_PWM_Init(&m_handles[idx]) != HAL_OK) {
+					assert("HAL_TIM_PWM_Init failed");
 				}
-				else {
-					// Timer déjà initialisé, on récupère juste le handle
-					htim = m_handles[instance];
-					// Note: Idéalement, on pourrait vérifier si T::Prescaler et T::Period
-					// correspondent à ceux déjà configurés. Pour l'instant, on suppose
-					// que la première configuration est la bonne.
-				}
-
-				// Configuration spécifique du canal PWM
-				TIM_OC_InitTypeDef oc_config = { };
-				oc_config.OCMode = MapMode(T::Mode);
-				oc_config.Pulse = 0; // Duty cycle à 0% au démarrage
-				oc_config.OCPolarity = MapPolarity(T::Polarity);
-				oc_config.OCFastMode = TIM_OCFAST_DISABLE;
-
-				if (HAL_TIM_PWM_ConfigChannel(&htim, &oc_config, MapTimerChannel(T::Channel)) != HAL_OK) {
-					assert("HAL_TIM_PWM_ConfigChannel failed");
-				}
-
-				// Met à jour le handle dans la map (au cas où HAL l'aurait modifié)
-				m_handles[instance] = htim;
+				is_initialized[idx] = true;
 			}
 
+			TIM_OC_InitTypeDef oc_config = { };
+			oc_config.OCMode = MapMode(T::Mode);
+			oc_config.Pulse = 0;
+			oc_config.OCPolarity = MapPolarity(T::Polarity);
+			oc_config.OCFastMode = TIM_OCFAST_DISABLE;
+
+			if (HAL_TIM_PWM_ConfigChannel(&m_handles[idx], &oc_config, MapTimerChannel(T::Channel)) != HAL_OK) {
+				assert("HAL_TIM_PWM_ConfigChannel failed");
+			}
+		}
+
 		void start(PwmTimerInstance timer, PwmTimerChannel channel) override {
-			TIM_HandleTypeDef* htim = &m_handles[MapTimerInstance(timer)];
-			HAL_TIM_PWM_Start(htim, MapTimerChannel(channel));
+			int8_t idx = GetTimerIndex(MapTimerInstance(timer));
+			HAL_TIM_PWM_Start(&m_handles[idx], MapTimerChannel(channel));
 		}
 
 		void stop(PwmTimerInstance timer, PwmTimerChannel channel) override {
-			TIM_HandleTypeDef* htim = &m_handles[MapTimerInstance(timer)];
-			HAL_TIM_PWM_Stop(htim, MapTimerChannel(channel));
+			int8_t idx = GetTimerIndex(MapTimerInstance(timer));
+			HAL_TIM_PWM_Stop(&m_handles[idx], MapTimerChannel(channel));
 		}
 
 		void setDutyCycle(PwmTimerInstance timer, PwmTimerChannel channel, uint32_t pulse) override {
-			TIM_HandleTypeDef* htim = &m_handles[MapTimerInstance(timer)];
-			// Utilise la macro HAL pour une mise à jour efficace (évite de reconfigurer tout le canal)
-			__HAL_TIM_SET_COMPARE(htim, MapTimerChannel(channel), pulse);
+			int8_t idx = GetTimerIndex(MapTimerInstance(timer));
+			__HAL_TIM_SET_COMPARE(&m_handles[idx], MapTimerChannel(channel), pulse);
 		}
 
 		void setPeriod(PwmTimerInstance timer, uint32_t period) override {
-			TIM_HandleTypeDef* htim = &m_handles[MapTimerInstance(timer)];
-			__HAL_TIM_SET_AUTORELOAD(htim, period);
+			int8_t idx = GetTimerIndex(MapTimerInstance(timer));
+			__HAL_TIM_SET_AUTORELOAD(&m_handles[idx], period);
 		}
         
 		void setPrescaler(PwmTimerInstance timer, uint32_t prescaler) override {
-			TIM_HandleTypeDef* htim = &m_handles[MapTimerInstance(timer)];
-			__HAL_TIM_SET_PRESCALER(htim, prescaler);
+			int8_t idx = GetTimerIndex(MapTimerInstance(timer));
+			__HAL_TIM_SET_PRESCALER(&m_handles[idx], prescaler);
 		}
 
 		// --- Implémentation des Mappers ---

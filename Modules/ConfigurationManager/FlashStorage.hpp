@@ -36,8 +36,18 @@ public:
     }
 
     static uint32_t calculate_crc(const void* data, size_t size) noexcept {
-        // Logique CRC32 via périphérique matériel CRC ou soft
-        return 0; 
+        __HAL_RCC_CRC_CLK_ENABLE();
+        CRC_HandleTypeDef hcrc;
+        hcrc.Instance = CRC;
+        
+        // Initialisation standard HAL
+        if (HAL_CRC_Init(&hcrc) != HAL_OK) return 0;
+        
+        // Calcul CRC sur le buffer
+        uint32_t crc = HAL_CRC_Calculate(&hcrc, (uint32_t*)data, size / 4);
+        
+        __HAL_RCC_CRC_CLK_DISABLE();
+        return crc;
     }
 };
 

@@ -2,40 +2,73 @@
 
 #include "RtosAbstract.hpp"
 #include "BusMessages.hpp"
-#include "PidController.hpp"
 #include "EventBus.hpp"
+#include "PidController.hpp"
+#include "SystemClock.hpp"
 
-namespace control {
+namespace modules::flight {
 
-template<typename DroneType>
 class FlightControlTask {
 public:
-    explicit FlightControlTask(bus::EventBus<bus::ActuatorCmd>& output_bus)
-        : output_bus_(output_bus) {}
+    FlightControlTask(bus::EventBus<bus::StateVector>& state_bus,
+                      bus::EventBus<bus::RcFrame>& rc_bus,
+                      bus::EventBus<bus::ActuatorCmd>& actuator_bus)
+        : state_bus_(state_bus), rc_bus_(rc_bus), actuator_bus_(actuator_bus) {}
 
-    // Boucle de contrôle à 400 Hz (appelée par la tâche RTOS)
-    void update(const bus::StateVector& state, const bus::RcFrame& rc) noexcept {
-        // 1. Calcul des consignes (ex: Yaw -> YawRate)
-        
-        // 2. Mise à jour PID (utilisation de std::array pour les axes)
-        float roll_out = pid_roll_.update(rc.channels[0], state.attitude.x(), hal::Microseconds(2500));
-        float pitch_out = pid_pitch_.update(rc.channels[1], state.attitude.y(), hal::Microseconds(2500));
-        float yaw_out = pid_yaw_.update(rc.channels[2], state.attitude.z(), hal::Microseconds(2500));
+    void init() {
+        // Initialisation des gains PID
+        // Abonnement aux bus
+    }
 
-        // 3. Construction et publication de la commande actionneur
-        bus::ActuatorCmd cmd{
-            .header = { .version = 1, .timestamp = hal::Microseconds(0) },
-            .channels = { roll_out, pitch_out, yaw_out, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f }
-        };
+    void run() {
+        TickType_t xLastWakeTime = xTaskGetTickCount();
+        const TickType_t xFrequency = pdMS_TO_TICKS(2); // 400Hz nominal (approx 2.5ms), sécurisé à 2ms ou 3ms selon tickrate
 
-        output_bus_.publish(cmd);
+        bus::StateVector state;
+        bus::RcFrame rc;
+        hal::Microseconds last_rc_time(0);
+
+        while (true) {
+            // 1. Lire bus (non-bloquant)
+            // state_bus_.pop(state);
+            // rc_bus_.pop(rc);
+
+            // 2. Failsafe (RC Timeout 100ms)
+            if ((SystemClock::get_time() - last_rc_time).count > 100000) {
+                // Trigger Failsafe (ex: publier commande zéro)
+            }
+
+            // 3. Calcul PID
+            hal::Microseconds dt(2500);
+            float roll_out = pid_roll_.update(rc.channels[0], state.attitude.x(), dt);
+            float pitch_out = pid_pitch_.update(rc.channels[1], state.attitude.y(), dt);
+            float yaw_out = pid_yaw_.update(rc.channels[2], state.attitude.z(), dt);
+            float throttle = rc.channels[3];
+
+            // 4. Mixage (QuadX simplifié)
+            bus::ActuatorCmd cmd{
+                .header = { .version = 1, .msg_id = bus::MessageType::ActuatorCmd, .timestamp = SystemClock::get_time() },
+                .channels = { 
+                    throttle + roll_out + pitch_out + yaw_out, // M1
+                    throttle - roll_out + pitch_out - yaw_out, // M2
+                    throttle + roll_out - pitch_out - yaw_out, // M3
+                    throttle - roll_out - pitch_out + yaw_out, // M4
+                    0, 0, 0, 0 
+                }
+            };
+            actuator_bus_.publish(cmd);
+
+            vTaskDelayUntil(&xLastWakeTime, xFrequency);
+        }
     }
 
 private:
-    bus::EventBus<bus::ActuatorCmd>& output_bus_;
-    PidController<DroneType, Axis::Roll> pid_roll_;
-    PidController<DroneType, Axis::Pitch> pid_pitch_;
-    PidController<DroneType, Axis::Yaw> pid_yaw_;
+    bus::EventBus<bus::StateVector>& state_bus_;
+    bus::EventBus<bus::RcFrame>& rc_bus_;
+    bus::EventBus<bus::ActuatorCmd>& actuator_bus_;
+    control::PidController<float, control::Axis::Roll> pid_roll_;
+    control::PidController<float, control::Axis::Pitch> pid_pitch_;
+    control::PidController<float, control::Axis::Yaw> pid_yaw_;
 };
 
-} // namespace control
+} // namespace modules::flight

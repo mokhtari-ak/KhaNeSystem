@@ -23,7 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "app_bridge.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -109,7 +109,7 @@ int main(void)
   MX_I2S3_Init();
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
-
+  app_main();
   /* USER CODE END 2 */
 
   /* Init scheduler */

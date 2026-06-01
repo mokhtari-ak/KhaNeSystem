@@ -23,4 +23,10 @@ struct Microseconds {
     explicit constexpr Microseconds(uint64_t us) : count(us) {}
 };
 
+// Concept de temps (Millisecondes)
+struct Milliseconds {
+    uint64_t count;
+    explicit constexpr Milliseconds(uint64_t ms) : count(ms) {}
+};
+
 } // namespace hal

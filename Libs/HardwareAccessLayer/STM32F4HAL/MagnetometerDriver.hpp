@@ -7,12 +7,11 @@
 namespace hal {
 
 struct MagData {
-    Eigen::Vector3f field_ut; // µT
+    Eigen::Vector3f field;
     Microseconds timestamp;
     bool is_valid;
 };
 
-// Driver Magnétomètre (Ex: HMC5883L/IST8310)
 template<typename Transport>
 class MagnetometerDriver {
 public:
@@ -23,10 +22,8 @@ public:
     }
 
     Result<MagData> update() noexcept {
-        // Lecture via transport_ (I2C)
-        // Validation : |B| ∈ [20 µT, 65 µT]
         return MagData{
-            .field_ut = Eigen::Vector3f::Zero(),
+            .field = Eigen::Vector3f(0.0f, 0.0f, 0.0f),
             .timestamp = Microseconds(0),
             .is_valid = true
         };
@@ -34,18 +31,6 @@ public:
 
 private:
     Transport& transport_;
-};
-
-// Mock pour simulation
-class MagnetometerDriverHook {
-public:
-    Result<MagData> update() noexcept {
-        return MagData{
-            .field_ut = Eigen::Vector3f(30.0f, 0.0f, 0.0f),
-            .timestamp = Microseconds(0),
-            .is_valid = true
-        };
-    }
 };
 
 } // namespace hal

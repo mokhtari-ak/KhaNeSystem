@@ -6,12 +6,12 @@
 namespace hal {
 
 struct AirspeedData {
-    float airspeed_ms;
+    float airspeed;
+    float temperature;
     Microseconds timestamp;
     bool is_valid;
 };
 
-// Driver Vitesse Air (Ex: DLVR)
 template<typename Transport>
 class AirspeedDriver {
 public:
@@ -22,10 +22,9 @@ public:
     }
 
     Result<AirspeedData> update() noexcept {
-        // Lecture via transport_ (I2C)
-        // Validation : airspeed ∈ [0, 100 m/s]
         return AirspeedData{
-            .airspeed_ms = 0.0f,
+            .airspeed = 0.0f,
+            .temperature = 25.0f,
             .timestamp = Microseconds(0),
             .is_valid = true
         };
@@ -33,18 +32,6 @@ public:
 
 private:
     Transport& transport_;
-};
-
-// Mock pour simulation
-class AirspeedDriverHook {
-public:
-    Result<AirspeedData> update() noexcept {
-        return AirspeedData{
-            .airspeed_ms = 15.0f,
-            .timestamp = Microseconds(0),
-            .is_valid = true
-        };
-    }
 };
 
 } // namespace hal

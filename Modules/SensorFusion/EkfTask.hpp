@@ -1,39 +1,39 @@
 #pragma once
 
 #include "RtosAbstract.hpp"
-#include "SensorFusion.hpp"
-#include "EventBus.hpp"
 #include "BusMessages.hpp"
+#include "EventBus.hpp"
+#include "SensorFusion.hpp"
 
-namespace fusion {
+namespace modules::sensor_fusion {
 
-// Tâche de traitement EKF (250 Hz)
 class EkfTask {
 public:
-    explicit EkfTask(rtos::IQueue<bus::SensorFrame, 8>& input_queue, 
-                     bus::EventBus<bus::StateVector>& output_bus)
-        : input_queue_(input_queue), output_bus_(output_bus) {}
+    EkfTask(bus::EventBus<bus::SensorFrame>& sensor_bus, 
+            bus::EventBus<bus::GnssFrame>& gnss_bus,
+            bus::EventBus<bus::StateVector>& output_bus) 
+        : sensor_bus_(sensor_bus), gnss_bus_(gnss_bus), output_bus_(output_bus) {}
 
-    void run() noexcept {
-        // Boucle de traitement temps-réel
+    void init() {
+        // Souscription aux flux d'entrées
+    }
+
+    void run() {
         while (true) {
-            auto frame = input_queue_.pop(hal::Microseconds(5000));
-            if (frame) {
-                // 1. Mise à jour EKF
-                auto result = fusion_.update_attitude(*frame);
-                
-                // 2. Publication du nouvel état
-                if (result) {
-                    output_bus_.publish(fusion_.get_state());
-                }
-            }
+            // Lecture des données du bus
+            // Exécution du cycle EKF (Predict/Update)
+            // Publication de l'état estimé
+            
+            // 250 Hz (4ms)
+            vTaskDelay(pdMS_TO_TICKS(4));
         }
     }
 
 private:
-    rtos::IQueue<bus::SensorFrame, 8>& input_queue_;
+    bus::EventBus<bus::SensorFrame>& sensor_bus_;
+    bus::EventBus<bus::GnssFrame>& gnss_bus_;
     bus::EventBus<bus::StateVector>& output_bus_;
-    SensorFusion fusion_;
+    EkfWrapper ekf_wrapper_;
 };
 
-} // namespace fusion
+} // namespace modules::sensor_fusion

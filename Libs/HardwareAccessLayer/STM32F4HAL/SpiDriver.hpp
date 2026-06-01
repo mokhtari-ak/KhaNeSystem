@@ -1,107 +1,82 @@
-// SpiDriver.hpp
 #pragma once
 
-#include <vector>
 #include <cstdint>
-#include <map>
-#include <functional>
 #include "ISpiDriver.hpp"
 
-namespace Hal {
+namespace hal {
 
-	struct HalSpiDriver : public Hal::ISpiDriver {
+	struct HalSpiDriver : public hal::ISpiDriver {
 
-		inline static constexpr int8_t handleEmpty = -1;
-		/**
-		* @Brief Stocke les handles HAL pour chaque interface SPI initialisée.
-		* @Note Chaque handle correspond à une instance de SPI (ex: SPI1, SPI2, etc.) et contient la configuration et l'état de l'interface SPI correspondante.
-		* @Note Les handles sont initialisés lors de l'appel à init() et utilisés pour toutes les opérations SPI (transmission, réception, etc.).
-		* @Note L'utilisation d'un vecteur permet de facilement étendre le driver à plusieurs interfaces SPI si nécessaire, sans devoir dupliquer le code pour chaque instance. Cependant, assurez-vous de gérer correctement les indices du vecteur pour éviter des accès hors limites.
-		* @Note une modification est necessaire utiliser Eigen3 à la place de std::vector pour stocker les handles, afin de réduire l'empreinte mémoire et d'améliorer les performances. Eigen3 offre des structures de données optimisées pour les systèmes embarqués, ce qui peut être bénéfique pour la gestion des ressources dans un environnement à contraintes.
-		*/
-		inline static std::vector<SPI_HandleTypeDef> spiHandles = { };
+		static constexpr int8_t MaxSpiHandles = 3;
+		
+		inline static SPI_HandleTypeDef spiHandles[MaxSpiHandles] = {};
+		inline static int8_t handleCount = 0;
+		inline static void (*tx_complete_callbacks[MaxSpiHandles])() = {nullptr};
+		inline static void (*rx_complete_callbacks[MaxSpiHandles])() = {nullptr};
+		inline static void (*txrx_complete_callbacks[MaxSpiHandles])() = {nullptr};
+		inline static void (*error_callbacks[MaxSpiHandles])() = {nullptr};
 
-		// Maps pour les callbacks
-		inline static std::map<SPI_TypeDef*, std::function<void()>> tx_complete_callbacks = { };
-		inline static std::map<SPI_TypeDef*, std::function<void()>> rx_complete_callbacks = { };
-		inline static std::map<SPI_TypeDef*, std::function<void()>> txrx_complete_callbacks = { };
-		inline static std::map<SPI_TypeDef*, std::function<void()>> error_callbacks = { };
-
-		/**
-		* @Brief Initialise le driver SPI.
-		* @Note Cette fonction initialise le driver SPI en fonction de la configuration spécifiée.
-		*/
 		template<SpiConfigPolicy T>
-			int8_t init() {
-				enable_clock(T::Port);
+		int8_t init() {
+			if (handleCount >= MaxSpiHandles) return -1;
+			enable_clock(T::Port);
 
-				SPI_HandleTypeDef m_handle = { };
-				m_handle.Instance = MapPort(T::Port);
-				m_handle.Init = getHALConfig<T>();
+			SPI_HandleTypeDef m_handle = { };
+			m_handle.Instance = MapPort(T::Port);
+			m_handle.Init = getHALConfig<T>();
 
-				HAL_StatusTypeDef status = HAL_SPI_Init(&m_handle);
+			HAL_StatusTypeDef status = HAL_SPI_Init(&m_handle);
 
-				if (status == HAL_OK) {
-					spiHandles.push_back(m_handle);
-					return spiHandles.size() - 1;
-				}
-				return handleEmpty;
+			if (status == HAL_OK) {
+				spiHandles[handleCount] = m_handle;
+				return handleCount++;
 			}
-
-		// --- Implémentation des fonctions bloquantes ---
-		DriverStatus transmit(int8_t handleIndex, const uint8_t* data, uint16_t size, uint32_t timeout) override {
-			return HAL_SPI_Transmit(&spiHandles[handleIndex], const_cast<uint8_t*>(data), size, timeout);
-		}
-		DriverStatus receive(int8_t handleIndex, uint8_t* data, uint16_t size, uint32_t timeout) override {
-			return HAL_SPI_Receive(&spiHandles[handleIndex], data, size, timeout);
-		}
-		DriverStatus transmit_receive(int8_t handleIndex, const uint8_t* txData, uint8_t* rxData, uint16_t size, uint32_t timeout) override {
-			return HAL_SPI_TransmitReceive(&spiHandles[handleIndex], const_cast<uint8_t*>(txData), rxData, size, timeout);
+			return -1;
 		}
 
-		// --- Implémentation des fonctions non-bloquantes (IT) ---
-		DriverStatus transmit_it(int8_t handleIndex, const uint8_t* data, uint16_t size) override {
-			return HAL_SPI_Transmit_IT(&spiHandles[handleIndex], const_cast<uint8_t*>(data), size);
-		}
-		DriverStatus receive_it(int8_t handleIndex, uint8_t* data, uint16_t size) override {
-			return HAL_SPI_Receive_IT(&spiHandles[handleIndex], data, size);
-		}
-		DriverStatus transmit_receive_it(int8_t handleIndex, const uint8_t* txData, uint8_t* rxData, uint16_t size) override {
-			return HAL_SPI_TransmitReceive_IT(&spiHandles[handleIndex], const_cast<uint8_t*>(txData), rxData, size);
-		}
-
-		// --- Fonctions statiques de gestion ---
 		static void attach_callbacks(int8_t handle_index,
-			std::function<void()> tx_cb,
-			std::function<void()> rx_cb,
-			std::function<void()> txrx_cb,
-			std::function<void()> error_cb) {
-			SPI_TypeDef* instance = spiHandles[handle_index].Instance;
-			if (tx_cb) tx_complete_callbacks[instance] = std::move(tx_cb);
-			if (rx_cb) rx_complete_callbacks[instance] = std::move(rx_cb);
-			if (txrx_cb) txrx_complete_callbacks[instance] = std::move(txrx_cb);
-			if (error_cb) error_callbacks[instance] = std::move(error_cb);
+			void (*tx_cb)(),
+			void (*rx_cb)(),
+			void (*txrx_cb)(),
+			void (*error_cb)()) {
+			if (handle_index >= 0 && handle_index < handleCount) {
+				tx_complete_callbacks[handle_index] = tx_cb;
+				rx_complete_callbacks[handle_index] = rx_cb;
+				txrx_complete_callbacks[handle_index] = txrx_cb;
+				error_callbacks[handle_index] = error_cb;
+			}
 		}
 
-		// Fonctions à appeler depuis les callbacks globaux HAL (stm32f4xx_it.c)
 		static void handle_tx_complete(SPI_HandleTypeDef *hspi) {
-			if (tx_complete_callbacks.count(hspi->Instance)) {
-				tx_complete_callbacks[hspi->Instance]();
+			for(int8_t i = 0; i < handleCount; ++i) {
+				if(spiHandles[i].Instance == hspi->Instance && tx_complete_callbacks[i]) {
+					tx_complete_callbacks[i]();
+					break;
+				}
 			}
 		}
 		static void handle_rx_complete(SPI_HandleTypeDef *hspi) {
-			if (rx_complete_callbacks.count(hspi->Instance)) {
-				rx_complete_callbacks[hspi->Instance]();
+			for(int8_t i = 0; i < handleCount; ++i) {
+				if(spiHandles[i].Instance == hspi->Instance && rx_complete_callbacks[i]) {
+					rx_complete_callbacks[i]();
+					break;
+				}
 			}
 		}
 		static void handle_txrx_complete(SPI_HandleTypeDef *hspi) {
-			if (txrx_complete_callbacks.count(hspi->Instance)) {
-				txrx_complete_callbacks[hspi->Instance]();
+			for(int8_t i = 0; i < handleCount; ++i) {
+				if(spiHandles[i].Instance == hspi->Instance && txrx_complete_callbacks[i]) {
+					txrx_complete_callbacks[i]();
+					break;
+				}
 			}
 		}
 		static void handle_error(SPI_HandleTypeDef *hspi) {
-			if (error_callbacks.count(hspi->Instance)) {
-				error_callbacks[hspi->Instance]();
+			for(int8_t i = 0; i < handleCount; ++i) {
+				if(spiHandles[i].Instance == hspi->Instance && error_callbacks[i]) {
+					error_callbacks[i]();
+					break;
+				}
 			}
 		}
 

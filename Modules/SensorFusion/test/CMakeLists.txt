@@ -1,0 +1,2 @@
+add_executable(system_model_test system_model_test.cpp)
+target_link_libraries(system_model_test PRIVATE SensorFusion KalmanFilterLib Eigen3::Eigen)
