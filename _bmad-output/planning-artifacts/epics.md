@@ -8,7 +8,7 @@
 ### Story 2.1: Implémentation des abstractions RTOS (FreeRTOS/ThreadX)
 ### Story 2.2: Développement de l'Internal Event Bus typé
 ### Story 2.3: Implémentation des types de messages Bus (SensorFrame, StateVector, etc.)
-### Story 2.4: Développement des tâches I/O (RcInputTask, TelemetryTask)
+###   py 2.4: Développement des tâches I/O (RcInputTask, TelemetryTask)
 ### Story 2.5: Développement du sous-module Storage (Abstraction FS)
 ### Story 2.6: Développement du module Logger haute performance
 

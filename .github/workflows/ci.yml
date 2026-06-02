@@ -30,4 +30,17 @@ jobs:
         
     - name: Quality Gates - Simulation SIL
       run: |
-        ./build/tests/e2e/sil_sim --headless --duration 10s
+        ./build/tests/e2e/sil_sim --headless --duration 10s --log sil_results.log
+        if [ $? -ne 0 ]; then
+          echo "SIL Simulation failed!"
+          exit 1
+        fi
+        
+    - name: Report Results to PR
+      if: always()
+      run: |
+        # Analyse simple du log pour générer un résumé
+        grep "PASS" sil_results.log | wc -l > pass_count.txt
+        grep "FAIL" sil_results.log | wc -l > fail_count.txt
+        echo "Simulation Results Summary: PASS: $(cat pass_count.txt), FAIL: $(cat fail_count.txt)" > simulation_report.txt
+        cat simulation_report.txt

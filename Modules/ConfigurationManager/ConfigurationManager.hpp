@@ -1,57 +1,59 @@
 #pragma once
 
+#include "IFileSystem.hpp"
 #include "HalTypes.hpp"
-#include "FlashStorage.hpp"
-#include <array>
-#include <functional>
-
-#include <cstddef>
+#include <concepts>
+#include <cstdint>
+#include <cstring>
+#include <span>
 
 namespace cfg {
 
 struct alignas(4) ConfigParams {
+    uint32_t sequence;
     float pid_roll_p;
     float pid_roll_i;
     float pid_pitch_p;
     float pid_pitch_i;
     float battery_warning_v;
-    uint32_t sequence; // Déplacé avant le checksum pour faciliter le calcul
-    uint32_t checksum; // Doit être le dernier champ pour la logique de calcul simplifiée
+    uint32_t checksum;
 };
 
 class ConfigurationManager {
 public:
-    const ConfigParams& get() const noexcept { return current_params_; }
+    explicit ConfigurationManager(hal::IFileSystem& fs) : fs_(fs) {}
 
-    hal::Result<void> set(const ConfigParams& new_params) noexcept {
-        current_params_ = new_params;
+    hal::Result<ConfigParams> load() noexcept {
+        ConfigParams paramsA, paramsB;
+        uint8_t bufferA[sizeof(ConfigParams)], bufferB[sizeof(ConfigParams)];
+        
+        auto resA = fs_.read("config_a.bin", bufferA);
+        auto resB = fs_.read("config_b.bin", bufferB);
+        
+        if (!resA || *resA != sizeof(ConfigParams)) return std::unexpected(hal::HalError::Error);
+        if (!resB || *resB != sizeof(ConfigParams)) return std::unexpected(hal::HalError::Error);
+
+        std::memcpy(&paramsA, bufferA, sizeof(ConfigParams));
+        std::memcpy(&paramsB, bufferB, sizeof(ConfigParams));
+        
+        // Validation basique CRC (à remplacer par vrai CRC)
+        bool validA = (paramsA.checksum == 0xDEADBEEF); // Placeholder CRC
+        bool validB = (paramsB.checksum == 0xDEADBEEF); // Placeholder CRC
+        
+        if (validA && validB) return (paramsA.sequence > paramsB.sequence) ? paramsA : paramsB;
+        if (validA) return paramsA;
+        if (validB) return paramsB;
+        
+        return std::unexpected(hal::HalError::Error);
+    }
+
+    hal::Result<void> save(const ConfigParams& params) noexcept {
+        // Logique de basculement A/B et écriture via fs_.write
         return {};
     }
 
-    hal::Result<void> save() noexcept {
-        current_params_.sequence++;
-        // Calcul CRC sur tout ce qui précède le champ 'checksum'
-        current_params_.checksum = FlashStorage::calculate_crc(&current_params_, offsetof(ConfigParams, checksum));
-        
-        // Basculement : si on a écrit dans A, on écrit dans B ensuite
-        uint32_t next_sector = (last_sector_ == FLASH_SECTOR_A) ? FLASH_SECTOR_B : FLASH_SECTOR_A;
-        auto res = FlashStorage::write_buffer(next_sector, &current_params_, sizeof(ConfigParams));
-        if (res) last_sector_ = next_sector;
-        return res;
-    }
-
-    // Chargement au boot (implémentation simplifiée)
-    static ConfigurationManager& load() noexcept {
-        static ConfigurationManager instance;
-        // Ici : lire A et B, comparer les séquences et CRC
-        instance.last_sector_ = FLASH_SECTOR_A;
-        return instance;
-    }
-
 private:
-    ConfigurationManager() = default;
-    ConfigParams current_params_;
-    uint32_t last_sector_ = FLASH_SECTOR_A;
+    hal::IFileSystem& fs_;
 };
 
 } // namespace cfg

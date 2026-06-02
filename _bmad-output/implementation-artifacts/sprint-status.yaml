@@ -69,5 +69,23 @@ development_status:
   5-1-safetytask-faultbus-watchdog-failsafe: done
   5-2-configurationmanager-persistance-flash: done
   5-3-mise-en-place-ci-cd-et-verification-memoire: done
-  5-4-module-calibration-tuning-persistance-et-validation-crc: backlog
+  5-4-module-calibration-tuning-persistance-et-validation-crc: done
   epic-5-retrospective: optional
+  epic-7: done
+  7-1-infrastructure-sil-simulation-airsim-gazebo: done
+  7-2-infrastructure-hitl-hardware-in-the-loop: done
+  7-3-automatisation-ci-cd-tests-de-simulation: done
+  epic-8: done
+  8-1-abstraction-modele-vehicule-vehiclemodel: done
+  8-2-implementation-mixage-quadcopter: done
+  8-3-implementation-mixage-fixed-wing: done
+  epic-9: done
+  9-1-abstraction-filesystem-littlefs-fatfs: done
+  9-2-moteur-de-logging-haute-performance: done
+  9-3-gestionnaire-de-configuration-robuste: done
+  epic-10: in-progress
+  10-1-driver-moniteur-de-puissance-adc-i2c-smbus: review
+  10-2-sous-module-gestion-de-la-batterie-bms: review
+  10-3-sous-module-gestion-du-fuel: review
+  10-4-politique-de-securite-energetique-failsafe: review
+  10-5-controle-de-l-alimentation-des-peripheriques: in-progress

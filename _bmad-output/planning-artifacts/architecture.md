@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [1]
+stepsCompleted: [1, 2]
 inputDocuments: ["_bmad-output/planning-artifacts/prds/prd-KhaNeSystem-2026-05-25/prd.md", "project-context.md"]
 workflowType: 'architecture'
 project_name: 'KhaNeSystem'
@@ -55,3 +55,26 @@ concept ISystemClock = requires(T t, Microseconds from) {
 - **Injection de dépendance**: L'interface est injectée dans les modules via template pour permettre le remplacement par un `MockClock` lors des tests SIL (AirSim) ou unitaires.
 - **Déterminisme**: Aucune fonction de temps n'est bloquante. L'accès au registre TIM2 se fait par lecture directe (overhead ~cycles CPU).
 - **Strong Typedefs**: Empêche les erreurs de calcul (`dt` en secondes vs millisecondes) à la compilation.
+
+## Project Context Analysis
+
+### Requirements Overview
+
+**Functional Requirements:**
+Le système doit assurer le contrôle de vol, la fusion de capteurs et la persistance des données critiques. L'architecture doit supporter plusieurs types de véhicules via une interface commune.
+
+**Non-Functional Requirements:**
+Temps réel strict, haute disponibilité pour la sécurité, utilisation mémoire contrainte, absence d'allocation dynamique.
+
+**Scale & Complexity:**
+- Primary domain: Avionique / Système Embarqué
+- Complexity level: Haute
+- Estimated architectural components: 15+
+
+### Technical Constraints & Dependencies
+
+Dépendances fortes sur la HAL, contraintes de pile RTOS, déterminisme du temps réel.
+
+### Cross-Cutting Concerns Identified
+
+Gestion de la mémoire, gestion des erreurs (pattern Result<T,E>), communication inter-tâches.
