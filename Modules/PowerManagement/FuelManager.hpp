@@ -17,7 +17,7 @@ public:
     // Mise à jour de l'estimation de fuel
     hal::Result<void> update(float dt) noexcept {
         auto data = power_monitor_.get_data();
-        if (!data) return std::unexpected(data.error());
+        if (!data) return hal::unexpected(data.error());
 
         // Calcul simplifié de consommation
         float consumption = data->current * dt; // Ah

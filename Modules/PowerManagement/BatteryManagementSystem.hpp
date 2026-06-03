@@ -17,7 +17,7 @@ public:
     // Mise à jour périodique des mesures et estimation
     hal::Result<void> update() noexcept {
         auto data = power_monitor_.get_data();
-        if (!data) return std::unexpected(data.error());
+        if (!data) return hal::unexpected(data.error());
 
         // Algorithme simplifié d'estimation SoC (State-of-Charge)
         // A remplacer par un modèle plus robuste

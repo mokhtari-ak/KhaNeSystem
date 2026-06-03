@@ -7,7 +7,7 @@
 #include <bitset>
 #include <algorithm>
 
-namespace safety {
+namespace modules::safety {
 
 enum class FailsafeLevel { None, Warning, Critical, Emergency, Lockout };
 
@@ -78,4 +78,6 @@ private:
     uint32_t health_checkpoints_ = 0;
 };
 
-} // namespace safety
+} // namespace modules::safety
+
+namespace safety = modules::safety;

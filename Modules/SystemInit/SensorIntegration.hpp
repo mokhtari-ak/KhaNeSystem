@@ -16,18 +16,23 @@
     template<typename T, size_t D> using RtosQueue = rtos::freertos::Queue<T, D>;
 #endif
 
+#ifdef SIL_TARGET
+    #include "AirSimTransport.hpp"
+#else
+    #include "SpiWrapper.hpp"
+#endif
+
 namespace system_init {
 
 // Instances globales ou statiques
 inline bus::EventBus<bus::SensorFrame> sensor_bus;
 inline RtosQueue<bus::SensorFrame, 8> ekf_queue;
+inline bus::QueueAdapter<bus::SensorFrame, decltype(ekf_queue)> ekf_subscriber(ekf_queue);
 
 // Configuration des drivers (ex: SPI1)
 #ifdef SIL_TARGET
-    #include "AirSimTransport.hpp"
     inline hal::AirSimTransport transport;
 #else
-    #include "SpiWrapper.hpp"
     extern SPI_HandleTypeDef hspi1;
     inline hal::SpiWrapper transport(&hspi1);
 #endif
@@ -35,7 +40,7 @@ inline RtosQueue<bus::SensorFrame, 8> ekf_queue;
 inline hal::ImuDriver<decltype(transport)> imu_driver(transport);
 
 void init_sensors() {
-    sensor_bus.subscribe(ekf_queue);
+    sensor_bus.subscribe(ekf_subscriber);
 }
 
 void sensor_task_loop() {

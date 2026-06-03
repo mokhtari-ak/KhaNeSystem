@@ -16,8 +16,8 @@ public:
                   bus::EventBus<bus::SensorFrame>& sensor_bus)
         : state_bus_(state_bus), sensor_bus_(sensor_bus) {
         
-        state_bus_.subscribe(state_queue_);
-        sensor_bus_.subscribe(sensor_queue_);
+        state_bus_.subscribe(state_subscriber_);
+        sensor_bus_.subscribe(sensor_subscriber_);
     }
 
     void init() {
@@ -44,6 +44,9 @@ private:
     
     rtos::freertos::Queue<bus::StateVector, 10> state_queue_;
     rtos::freertos::Queue<bus::SensorFrame, 10> sensor_queue_;
+
+    bus::QueueAdapter<bus::StateVector, decltype(state_queue_)> state_subscriber_{state_queue_};
+    bus::QueueAdapter<bus::SensorFrame, decltype(sensor_queue_)> sensor_subscriber_{sensor_queue_};
     
     int8_t uart_handle_;
     rf::MavlinkTransmitter transmitter_;

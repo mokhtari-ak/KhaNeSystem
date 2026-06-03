@@ -19,7 +19,7 @@ public:
         uint32_t sector_error;
         if (HAL_FLASHEx_Erase(&erase_init, &sector_error) != HAL_OK) {
             HAL_FLASH_Lock();
-            return std::unexpected(hal::HalError::Error);
+            return hal::unexpected(hal::HalError::Error);
         }
 
         // Écriture des données
@@ -27,7 +27,7 @@ public:
         for (size_t i = 0; i < size; i += 4) {
             if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, 0x080C0000 + (sector * 0x20000) + i, *(uint32_t*)(p + i)) != HAL_OK) {
                 HAL_FLASH_Lock();
-                return std::unexpected(hal::HalError::Error);
+                return hal::unexpected(hal::HalError::Error);
             }
         }
 

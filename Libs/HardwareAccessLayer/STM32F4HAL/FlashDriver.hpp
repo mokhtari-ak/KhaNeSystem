@@ -11,28 +11,28 @@ public:
         FLASH_EraseInitTypeDef erase_init{FLASH_TYPEERASE_SECTORS, sector, 1, FLASH_VOLTAGE_RANGE_3};
         uint32_t sector_error;
         if (HAL_FLASHEx_Erase(&erase_init, &sector_error) != HAL_OK) {
-            return std::unexpected(HalError::Error);
+            return hal::unexpected(HalError::Error);
         }
         return {};
     }
 
     Result<void> write_word(uint32_t address, uint32_t data) noexcept override {
         if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, address, data) != HAL_OK) {
-            return std::unexpected(HalError::Error);
+            return hal::unexpected(HalError::Error);
         }
         return {};
     }
 
     Result<void> unlock() noexcept override {
         if (HAL_FLASH_Unlock() != HAL_OK) {
-            return std::unexpected(HalError::Error);
+            return hal::unexpected(HalError::Error);
         }
         return {};
     }
 
     Result<void> lock() noexcept override {
         if (HAL_FLASH_Lock() != HAL_OK) {
-            return std::unexpected(HalError::Error);
+            return hal::unexpected(HalError::Error);
         }
         return {};
     }

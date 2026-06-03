@@ -2,7 +2,6 @@
 
 #include "IHalWrappers.hpp"
 #include "HalTypes.hpp"
-#include <expected>
 
 namespace hal {
 

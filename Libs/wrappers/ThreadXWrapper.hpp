@@ -20,7 +20,7 @@ public:
             stack_buffer_.data(), StackSizeBytes, priority_, priority_,
             TX_NO_TIME_SLICE, TX_AUTO_START
         );
-        return status == TX_SUCCESS ? hal::Result<void>{} : std::unexpected(hal::HalError::Error);
+        return status == TX_SUCCESS ? hal::Result<void>{} : hal::unexpected(hal::HalError::Error);
     }
 
 private:
@@ -41,13 +41,13 @@ public:
 
     hal::Result<void> push(const T& msg, hal::Microseconds timeout) noexcept {
         UINT status = tx_queue_send(&handle_, (void*)&msg, timeout.count / 1000);
-        return status == TX_SUCCESS ? hal::Result<void>{} : std::unexpected(hal::HalError::Timeout);
+        return status == TX_SUCCESS ? hal::Result<void>{} : hal::unexpected(hal::HalError::Timeout);
     }
 
     hal::Result<T> pop(hal::Microseconds timeout) noexcept {
         T msg;
         UINT status = tx_queue_receive(&handle_, (void*)&msg, timeout.count / 1000);
-        return status == TX_SUCCESS ? hal::Result<T>{msg} : std::unexpected(hal::HalError::Timeout);
+        return status == TX_SUCCESS ? hal::Result<T>{msg} : hal::unexpected(hal::HalError::Timeout);
     }
 
 private:

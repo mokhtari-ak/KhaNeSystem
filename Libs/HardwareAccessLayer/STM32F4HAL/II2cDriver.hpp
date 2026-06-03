@@ -7,22 +7,22 @@
 using namespace Wrapper;
 using namespace WrapperBase;
 
-namespace Hal {
+namespace hal {
 
 	/// @brief Interface pour le driver I2C de bas niveau.
 	struct II2cDriver {
 		template<I2cConfigPolicy T>
 			int8_t init();
 
-		virtual DriverStatus master_transmit(int8_t handleIndex, uint16_t devAddress, const uint8_t* data, uint16_t size, uint32_t timeout) = 0;
-		virtual DriverStatus master_receive(int8_t handleIndex, uint16_t devAddress, uint8_t* data, uint16_t size, uint32_t timeout) = 0;
-		virtual DriverStatus mem_write(int8_t handleIndex, uint16_t devAddress, uint16_t memAddress, uint16_t memAddSize, const uint8_t* data, uint16_t size, uint32_t timeout) = 0;
-		virtual DriverStatus mem_read(int8_t handleIndex, uint16_t devAddress, uint16_t memAddress, uint16_t memAddSize, uint8_t* data, uint16_t size, uint32_t timeout) = 0;
+		virtual Result<void> master_transmit(int8_t handleIndex, uint16_t devAddress, const uint8_t* data, uint16_t size, uint32_t timeout) = 0;
+		virtual Result<void> master_receive(int8_t handleIndex, uint16_t devAddress, uint8_t* data, uint16_t size, uint32_t timeout) = 0;
+		virtual Result<void> mem_write(int8_t handleIndex, uint16_t devAddress, uint16_t memAddress, uint16_t memAddSize, const uint8_t* data, uint16_t size, uint32_t timeout) = 0;
+		virtual Result<void> mem_read(int8_t handleIndex, uint16_t devAddress, uint16_t memAddress, uint16_t memAddSize, uint8_t* data, uint16_t size, uint32_t timeout) = 0;
 
-		virtual DriverStatus master_transmit_it(int8_t handleIndex, uint16_t devAddress, const uint8_t* data, uint16_t size) = 0;
-		virtual DriverStatus master_receive_it(int8_t handleIndex, uint16_t devAddress, uint8_t* data, uint16_t size) = 0;
-		virtual DriverStatus mem_write_it(int8_t handleIndex, uint16_t devAddress, uint16_t memAddress, uint16_t memAddSize, const uint8_t* data, uint16_t size) = 0;
-		virtual DriverStatus mem_read_it(int8_t handleIndex, uint16_t devAddress, uint16_t memAddress, uint16_t memAddSize, uint8_t* data, uint16_t size) = 0;
+		virtual Result<void> master_transmit_it(int8_t handleIndex, uint16_t devAddress, const uint8_t* data, uint16_t size) = 0;
+		virtual Result<void> master_receive_it(int8_t handleIndex, uint16_t devAddress, uint8_t* data, uint16_t size) = 0;
+		virtual Result<void> mem_write_it(int8_t handleIndex, uint16_t devAddress, uint16_t memAddress, uint16_t memAddSize, const uint8_t* data, uint16_t size) = 0;
+		virtual Result<void> mem_read_it(int8_t handleIndex, uint16_t devAddress, uint16_t memAddress, uint16_t memAddSize, uint8_t* data, uint16_t size) = 0;
 
 		static constexpr I2C_TypeDef* MapPort(I2cPort port);
 		static constexpr uint32_t MapAddressingMode(I2cAddressingMode mode);
@@ -40,4 +40,4 @@ namespace Hal {
 		virtual ~II2cDriver() = default;
 	};
 
-} // namespace Hal
+} // namespace hal

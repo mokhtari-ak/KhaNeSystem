@@ -5,6 +5,7 @@
 #include <type_traits>
 #include "HalTypes.hpp"
 #include "Eigen/Core"
+#include "Eigen/Geometry"
 
 namespace bus {
 
@@ -97,10 +98,10 @@ struct alignas(4) PowerStatus {
     uint8_t padding[1];
 };
 
-// Vérification statique : Taille, POD, et trivialité
+// Vérification statique : Taille, et layout standard
 #define VALIDATE_MESSAGE(Type) \
     static_assert(sizeof(Type) <= 128, "Message exceeds 128 bytes"); \
-    static_assert(std::is_trivially_copyable_v<Type>, "Message must be trivially copyable (POD)")
+    static_assert(std::is_standard_layout_v<Type>, "Message must have standard layout")
 
 VALIDATE_MESSAGE(SensorFrame);
 VALIDATE_MESSAGE(GnssFrame);

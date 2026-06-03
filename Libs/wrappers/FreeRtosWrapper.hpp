@@ -21,7 +21,7 @@ public:
             func_, name_, StackSizeBytes / sizeof(StackType_t), param_,
             priority_, stack_buffer_.data(), &tcb_
         );
-        return handle_ ? hal::Result<void>{} : std::unexpected(hal::HalError::Error);
+        return handle_ ? hal::Result<void>{} : hal::unexpected(hal::HalError::Error);
     }
 
 private:

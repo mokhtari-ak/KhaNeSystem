@@ -19,7 +19,7 @@ public:
         if (xQueueSend(handle_, &msg, pdMS_TO_TICKS(timeout.count / 1000)) == pdPASS) {
             return {};
         }
-        return std::unexpected(hal::HalError::Timeout);
+        return hal::unexpected(hal::HalError::Timeout);
     }
 
     hal::Result<T> pop(hal::Microseconds timeout) noexcept {
@@ -27,7 +27,7 @@ public:
         if (xQueueReceive(handle_, &msg, pdMS_TO_TICKS(timeout.count / 1000)) == pdPASS) {
             return msg;
         }
-        return std::unexpected(hal::HalError::Timeout);
+        return hal::unexpected(hal::HalError::Timeout);
     }
 
 private:
@@ -43,11 +43,11 @@ public:
     }
 
     hal::Result<void> give() noexcept {
-        return xSemaphoreGive(handle_) == pdTRUE ? hal::Result<void>{} : std::unexpected(hal::HalError::Error);
+        return xSemaphoreGive(handle_) == pdTRUE ? hal::Result<void>{} : hal::unexpected(hal::HalError::Error);
     }
 
     hal::Result<void> take(hal::Microseconds timeout) noexcept {
-        return xSemaphoreTake(handle_, pdMS_TO_TICKS(timeout.count / 1000)) == pdTRUE ? hal::Result<void>{} : std::unexpected(hal::HalError::Timeout);
+        return xSemaphoreTake(handle_, pdMS_TO_TICKS(timeout.count / 1000)) == pdTRUE ? hal::Result<void>{} : hal::unexpected(hal::HalError::Timeout);
     }
 
 private:

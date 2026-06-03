@@ -19,7 +19,7 @@ public:
         if (HAL_IWDG_Refresh(hiwdg_) == HAL_OK) {
             return {};
         }
-        return std::unexpected(HalError::Error);
+        return hal::unexpected(HalError::Error);
     }
 
 private:

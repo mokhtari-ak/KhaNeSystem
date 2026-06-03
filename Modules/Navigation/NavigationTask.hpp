@@ -45,8 +45,8 @@ public:
 
             // 3. Calculer l'erreur de navigation vers le waypoint cible
             const Waypoint& target = mission_[current_waypoint_];
-            float dx = target.lat - current_state.pos_x; // Exemple mapping
-            float dy = target.lon - current_state.pos_y;
+            float dx = target.lat - current_state.position.x(); // Exemple mapping
+            float dy = target.lon - current_state.position.y();
             float dist_sq = dx*dx + dy*dy;
 
             // 4. Passage automatique au waypoint
@@ -71,7 +71,7 @@ public:
 private:
     bool check_geofence(const bus::StateVector& state) {
         // Distance au point d'origine (0,0) > 500m
-        return (state.pos_x*state.pos_x + state.pos_y*state.pos_y) > (500.0f * 500.0f);
+        return (state.position.x()*state.position.x() + state.position.y()*state.position.y()) > (500.0f * 500.0f);
     }
 
 private:

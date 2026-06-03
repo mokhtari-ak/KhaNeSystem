@@ -17,7 +17,7 @@ public:
         auto v_res = adc_.read_channel(0); // Canal 0: Tension
         auto i_res = adc_.read_channel(1); // Canal 1: Courant
 
-        if (!v_res || !i_res) return std::unexpected(HalError::Error);
+        if (!v_res || !i_res) return hal::unexpected(HalError::Error);
 
         // Conversion brute vers Volts/Amps
         float voltage = static_cast<float>(*v_res) * 0.01f;

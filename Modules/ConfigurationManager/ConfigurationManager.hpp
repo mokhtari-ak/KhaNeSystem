@@ -30,8 +30,8 @@ public:
         auto resA = fs_.read("config_a.bin", bufferA);
         auto resB = fs_.read("config_b.bin", bufferB);
         
-        if (!resA || *resA != sizeof(ConfigParams)) return std::unexpected(hal::HalError::Error);
-        if (!resB || *resB != sizeof(ConfigParams)) return std::unexpected(hal::HalError::Error);
+        if (!resA || *resA != sizeof(ConfigParams)) return hal::unexpected(hal::HalError::Error);
+        if (!resB || *resB != sizeof(ConfigParams)) return hal::unexpected(hal::HalError::Error);
 
         std::memcpy(&paramsA, bufferA, sizeof(ConfigParams));
         std::memcpy(&paramsB, bufferB, sizeof(ConfigParams));
@@ -44,7 +44,7 @@ public:
         if (validA) return paramsA;
         if (validB) return paramsB;
         
-        return std::unexpected(hal::HalError::Error);
+        return hal::unexpected(hal::HalError::Error);
     }
 
     hal::Result<void> save(const ConfigParams& params) noexcept {

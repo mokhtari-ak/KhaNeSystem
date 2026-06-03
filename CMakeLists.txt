@@ -9,7 +9,7 @@ if(NOT CMAKE_TOOLCHAIN_FILE)
 endif()
 
 # Compiler Flags
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -34,7 +34,7 @@ add_subdirectory(Modules/ConfigurationManager)
 # Build artifacts
 add_executable(${CMAKE_PROJECT_NAME} "")
 
-# Modules systÃ¨me
+# Modules système
 add_subdirectory(cmake/stm32cubemx)
 add_subdirectory(Libs/HardwareAccessLayer/STM32F4HAL)
 add_subdirectory(Libs/wrappers/WrapperPolicies)

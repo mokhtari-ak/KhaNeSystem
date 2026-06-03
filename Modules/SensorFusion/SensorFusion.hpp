@@ -1,6 +1,6 @@
 #pragma once
 
-#include "kalman/ExtendedKalmanFilter.hpp"
+#include "../KalmanFilterLibrary/include/kalman/ExtendedKalmanFilter.hpp"
 #include "BusMessages.hpp"
 #include "Eigen/Core"
 #include <array>

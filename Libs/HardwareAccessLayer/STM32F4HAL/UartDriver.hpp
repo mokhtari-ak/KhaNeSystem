@@ -13,17 +13,17 @@ public:
         // Le cast est nécessaire pour l'API C, mais nous garantissons l'absence de modification.
         HAL_StatusTypeDef status = HAL_UART_Transmit(huart, reinterpret_cast<uint8_t*>(const_cast<uint8_t*>(data)), size, static_cast<uint32_t>(timeout.count));
         if (status == HAL_OK) return {};
-        if (status == HAL_BUSY) return std::unexpected(HalError::Busy);
-        if (status == HAL_TIMEOUT) return std::unexpected(HalError::Timeout);
-        return std::unexpected(HalError::Error);
+        if (status == HAL_BUSY) return hal::unexpected(HalError::Busy);
+        if (status == HAL_TIMEOUT) return hal::unexpected(HalError::Timeout);
+        return hal::unexpected(HalError::Error);
     }
 
     static Result<void> receive(UART_HandleTypeDef* huart, uint8_t* data, uint16_t size, Milliseconds timeout) noexcept {
         HAL_StatusTypeDef status = HAL_UART_Receive(huart, data, size, static_cast<uint32_t>(timeout.count));
         if (status == HAL_OK) return {};
-        if (status == HAL_BUSY) return std::unexpected(HalError::Busy);
-        if (status == HAL_TIMEOUT) return std::unexpected(HalError::Timeout);
-        return std::unexpected(HalError::Error);
+        if (status == HAL_BUSY) return hal::unexpected(HalError::Busy);
+        if (status == HAL_TIMEOUT) return hal::unexpected(HalError::Timeout);
+        return hal::unexpected(HalError::Error);
     }
 };
 

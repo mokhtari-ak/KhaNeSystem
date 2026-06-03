@@ -37,7 +37,7 @@ public:
                 busy_detected = true;
             }
         }
-        if (busy_detected) return std::unexpected(hal::HalError::Busy);
+        if (busy_detected) return hal::unexpected(hal::HalError::Busy);
         return {};
     }
 

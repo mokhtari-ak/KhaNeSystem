@@ -1,14 +1,15 @@
 #pragma once
 
-#include <cstdint>
+#include <stdint.h>
 #include "II2cDriver.hpp"
 #include "stm32f4xx_hal.h"
 #include "I2cConfigPolicy.hpp"
 
-using namespace WrapperBase;
+
+
 
 namespace hal {
-
+	using namespace WrapperBase;
 	struct HalI2cDriver : public hal::II2cDriver {
 
 		static constexpr int8_t MaxI2cHandles = 3;
@@ -118,15 +119,6 @@ namespace hal {
 
 		static constexpr uint32_t MapDutyCycle(I2cDutyCycle cycle) {
 			return (cycle == I2cDutyCycle::Cycle16_9) ? I2C_DUTYCYCLE_16_9 : I2C_DUTYCYCLE_2;
-		}
-
-		static DriverStatus From_hal(HAL_StatusTypeDef s) {
-			switch(s) {
-				case HAL_OK:      return DriverStatus::Ok;
-				case HAL_BUSY:    return DriverStatus::Busy;
-				case HAL_TIMEOUT: return DriverStatus::Timeout;
-				default:          return DriverStatus::Error;
-			}
 		}
 
 		template<I2cConfigPolicy config>

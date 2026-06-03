@@ -1,0 +1,17 @@
+{
+  "OutputFoldersPerTargetSystem": {
+    "Local Machine": [
+      "build\\Debug",
+      "build\\RelWithDebInfo",
+      "build\\Release",
+      "build\\MinSizeRel"
+    ]
+  },
+  "ExpandedNodes": [
+    "",
+    "\\Modules\\RFCommunication\\mavlinkV2",
+    "\\Modules\\RFCommunication\\mavlinkV2\\pymavlink\\generator\\CS"
+  ],
+  "SelectedNode": "\\Modules",
+  "PreviewInSolutionExplorer": false
+}
