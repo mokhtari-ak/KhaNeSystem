@@ -5,6 +5,7 @@
 #include "EventBus.hpp"
 #include "PidController.hpp"
 #include "SystemClock.hpp"
+#include "ISimulationBridge.hpp"
 
 namespace modules::flight {
 
@@ -12,8 +13,9 @@ class FlightControlTask {
 public:
     FlightControlTask(bus::EventBus<bus::StateVector>& state_bus,
                       bus::EventBus<bus::RcFrame>& rc_bus,
-                      bus::EventBus<bus::ActuatorCmd>& actuator_bus)
-        : state_bus_(state_bus), rc_bus_(rc_bus), actuator_bus_(actuator_bus) {}
+                      bus::EventBus<bus::ActuatorCmd>& actuator_bus,
+                      ::hal::ISimulationBridge* sim_bridge = nullptr)
+        : state_bus_(state_bus), rc_bus_(rc_bus), actuator_bus_(actuator_bus), sim_bridge_(sim_bridge) {}
 
     void init() {
         // Initialisation des gains PID
@@ -54,6 +56,11 @@ public:
             };
             actuator_bus_.publish(cmd);
 
+            // Simulation bridge interaction if connected
+            if (sim_bridge_ && sim_bridge_->is_connected()) {
+                // send commands to simulator
+            }
+
             vTaskDelayUntil(&xLastWakeTime, xFrequency);
         }
     }
@@ -62,6 +69,7 @@ private:
     bus::EventBus<bus::StateVector>& state_bus_;
     bus::EventBus<bus::RcFrame>& rc_bus_;
     bus::EventBus<bus::ActuatorCmd>& actuator_bus_;
+    ::hal::ISimulationBridge* sim_bridge_;
     // Utilisation d'un type fictif 'void' pour DroneType si non spécifié, ou un enum correct.
     // Selon PidController.hpp: template<typename DroneType, Axis axis>
     control::PidController<void, control::Axis::Roll> pid_roll_;

@@ -8,6 +8,12 @@ if(NOT CMAKE_TOOLCHAIN_FILE)
     message(FATAL_ERROR "No toolchain file provided. Use -DCMAKE_TOOLCHAIN_FILE=cmake/gcc-arm-none-eabi.cmake")
 endif()
 
+# Simulation Support
+option(BUILD_SIL "Build with Software-in-the-Loop simulation support" OFF)
+if(BUILD_SIL)
+    add_compile_definitions(BUILD_SIL)
+endif()
+
 # Compiler Flags
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

@@ -44,7 +44,7 @@
 /* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c1;
 
-extern "C" IWDG_HandleTypeDef hiwdg;
+IWDG_HandleTypeDef hiwdg;
 
 I2S_HandleTypeDef hi2s3;
 

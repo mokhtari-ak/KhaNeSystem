@@ -1,0 +1,37 @@
+// Generation des tests SIL (Fichiers temporaires)
+
+// 1. Tests API (Worker A) - Simulation des drivers capteurs
+{
+  "api_tests": [
+    {
+      "test_name": "SensorIntegration_SpiWrapper_TransmitReceive_Success",
+      "level": "Integration",
+      "priority": "P0",
+      "description": "Valide que le wrapper SPI transmet correctement les données vers le simulateur SIL."
+    },
+    {
+      "test_name": "SensorIntegration_ImuDriver_Update_DataFlow",
+      "level": "Integration",
+      "priority": "P0",
+      "description": "Valide la réception des données IMU simulées via le transport SIL."
+    }
+  ]
+}
+
+// 2. Tests Backend (Worker B-backend) - Logique de vol
+{
+  "backend_tests": [
+    {
+      "test_name": "FlightControlTask_400HzLoop_Stability",
+      "level": "E2E",
+      "priority": "P0",
+      "description": "Vérifie que la boucle de contrôle à 400Hz tourne à une fréquence stable en simulation."
+    },
+    {
+      "test_name": "SafetyTask_FailsafeTrigger_LossOfRadio",
+      "level": "E2E",
+      "priority": "P0",
+      "description": "Simule une perte radio et valide que le Failsafe Task prend le relais."
+    }
+  ]
+}

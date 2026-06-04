@@ -22,6 +22,10 @@
     #include "SpiWrapper.hpp"
 #endif
 
+#ifndef SIL_TARGET
+    extern SPI_HandleTypeDef hspi1;
+#endif
+
 namespace system_init {
 
 // Instances globales ou statiques
@@ -33,7 +37,6 @@ inline bus::QueueAdapter<bus::SensorFrame, decltype(ekf_queue)> ekf_subscriber(e
 #ifdef SIL_TARGET
     inline hal::AirSimTransport transport;
 #else
-    extern SPI_HandleTypeDef hspi1;
     inline hal::SpiWrapper transport(&hspi1);
 #endif
 

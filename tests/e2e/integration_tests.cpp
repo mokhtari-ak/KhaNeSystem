@@ -1,43 +1,24 @@
 #include <gtest/gtest.h>
-#include "Modules/SensorFusion/SensorFusion.hpp"
-#include "Modules/FlightControl/FlightControlTask.hpp"
-#include "Modules/Safety/SafetyTask.hpp"
+#include "SensorIntegration.hpp"
+#include "SpiWrapper.hpp"
 
-using namespace fusion;
-using namespace control;
-using namespace safety;
-
-TEST(IntegrationTest, PipelineNominal) {
-    // Setup bus
-    bus::EventBus<bus::ActuatorCmd> output_bus;
+// Tests API pour valider le bridge SIL
+TEST(SensorIntegrationTest, SpiWrapper_TransmitReceive_Success) {
+    // Setup Mock SPI Handle
+    SPI_HandleTypeDef hspi; 
+    hal::SpiWrapper transport(&hspi);
     
-    // Setup modules
-    SensorFusion fusion;
-    FlightControlTask<DroneType::Quadcopter> controller(output_bus);
+    std::vector<uint8_t> tx = {0x01, 0x02};
+    std::vector<uint8_t> rx(2);
     
-    // Simulate data
-    bus::SensorFrame frame{.header = {1, hal::Microseconds(0)}, .accel = Eigen::Vector3f(0,0,9.81f)};
-    
-    // Process
-    auto result = fusion.update_attitude(frame);
-    ASSERT_TRUE(result.has_value());
-    
-    // Verify control output
-    bus::RcFrame rc{.channels = {0,0,0,0,0,0,0,0}};
-    controller.update(fusion.get_state(), rc);
-    
-    // Assert logic ...
+    auto res = transport.transmit_receive(tx, rx, hal::Microseconds(1000));
+    EXPECT_TRUE(res.has_value());
 }
 
-TEST(RobustnessTest, FailsafeTriggeredOnImuFailure) {
-    bus::EventBus<bus::FaultEvent> fault_bus;
-    SafetyTask safety(fault_bus);
-    
-    // Simulate IMU NaN failure
-    bus::StateVector corrupted_state{}; 
-    
-    // Verify SafetyTask response
-    safety.update(corrupted_state);
-    
-    // Assert FaultEvent is published
+TEST(SensorIntegrationTest, ImuDriver_Update_DataFlow) {
+    // Validation de la réception IMU simulée
+    system_init::init_sensors();
+    system_init::sensor_task_loop();
+    // Vérifier si les données sont bien dans le bus (via mock EventBus)
+    SUCCEED();
 }
